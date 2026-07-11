@@ -1,0 +1,5 @@
+# config.yaml 템플릿 — 실제 값 채운 뒤 config.yaml 로 복사해 사용 (config.yaml 은 커밋 금지)
+telegram:
+  token: "YOUR_TELEGRAM_BOT_TOKEN"     # BotFather 발급 토큰
+  allow_from:
+    - "YOUR_TELEGRAM_USER_ID"          # 허용할 텔레그램 사용자 ID

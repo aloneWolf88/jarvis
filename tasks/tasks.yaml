@@ -1,0 +1,18 @@
+# JARVIS 작업 정의
+#
+# 사용법:
+#   - 작업 활성화/비활성화: enabled 값 변경 후 → python manage.py sync
+#   - 새 작업 추가: 항목 추가 후 → python manage.py sync
+#
+# 스케줄 방식 (둘 중 하나):
+#   - interval_minutes: N        # 매 N분마다
+#   - schedule: "HH:MM"          # 매일 특정 시각
+
+tasks:
+  - id: site-monitor
+    name: JARVIS-SiteMonitor
+    enabled: true
+    description: 사이트 가동 모니터링 (1분 주기)
+    script: scripts/monitor_site.py
+    interval_minutes: 1
+    timeout_minutes: 5

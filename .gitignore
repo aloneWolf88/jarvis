@@ -1,0 +1,36 @@
+# ===== 비밀/설정 (커밋 금지) =====
+.env
+*.key
+*.pem
+*.token
+# API 키/토큰 포함 → 템플릿(config.yaml.example)만 공유
+config.yaml
+
+# ===== 실행 스크립트 (경로/계정 노출 주의) =====
+# 계정·경로 노출 시 stock_day.bat.example 로 대체
+stock_day.bat
+
+# ===== 데이터/로그/산출물 =====
+data/
+logs/
+out/
+*.log
+
+# ===== Python =====
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.bak
+.ruff_cache/
+
+# ===== IDE / 툴 =====
+.vscode/
+.continue/
+.kilo/
+.ai/
+*.code-workspace
+
+# ===== OS =====
+.DS_Store
+Thumbs.db

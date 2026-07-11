@@ -1,0 +1,59 @@
+name: research-bot
+description: 네이버 금융 리서치 데이터 조회 및 분석
+version: 1.0
+
+triggers:
+  - 리서치
+  - 리포트
+  - 종목
+  - 투자의견
+  - 커버리지
+
+commands:
+  - name: today
+    description: 오늘 수집된 리포트 요약
+    keywords: ["오늘 리포트", "오늘 리서치", "오늘 요약"]
+    shell: "python D:\\workspace\\jarvis\\research_bot\\main.py --today"
+
+  - name: stats
+    description: 전체 통계 (카테고리별/종목별/투자의견별)
+    keywords: ["통계", "총 몇건", "현황"]
+    shell: "python D:\\workspace\\jarvis\\research_bot\\main.py --stats"
+
+  - name: list_tickers
+    description: 수집된 모든 종목 목록
+    keywords: ["수집된 종목", "종목 목록", "종목 리스트"]
+    shell: "python D:\\workspace\\jarvis\\research_bot\\main.py --list-tickers"
+
+  - name: list_reports
+    description: 최근 리포트 20개 목록
+    keywords: ["리포트 목록", "최근 리포트"]
+    shell: "python D:\\workspace\\jarvis\\research_bot\\main.py --list-reports"
+
+  - name: ticker
+    description: 특정 종목의 리포트 조회
+    keywords: ["종목 조회", "리포트 조회"]
+    shell: "python D:\\workspace\\jarvis\\research_bot\\main.py --ticker {ticker_name}"
+    params:
+      - name: ticker_name
+        description: 종목명 (예 삼성전자)
+        required: true
+
+  - name: query
+    description: 자연어 질문으로 리포트 검색
+    keywords: ["상향 몇건", "하향 몇건", "최근"]
+    shell: "python D:\\workspace\\jarvis\\research_bot\\main.py --query \"{question}\""
+    params:
+      - name: question
+        description: 자연어 질문
+        required: true
+
+  - name: new_coverage
+    description: 신규 커버리지 종목 조회
+    keywords: ["신규 커버리지", "새로운 종목"]
+    shell: "python D:\\workspace\\jarvis\\research_bot\\main.py --new"
+
+  - name: batch
+    description: 수동 크롤링 실행
+    keywords: ["크롤링 실행", "리서치 수집", "지금 크롤링"]
+    shell: "python D:\\workspace\\jarvis\\research_bot\\main.py --batch"

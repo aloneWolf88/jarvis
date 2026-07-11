@@ -1,0 +1,21 @@
+@echo off
+REM == jarvis auto run: telegram_bot.py + scheduler.py ==
+REM 템플릿 — stock_day.bat 로 복사 후 사용 (stock_day.bat 은 커밋 금지)
+chcp 65001 >nul
+
+REM base dir (Task Scheduler compatible)
+cd /d "%~dp0"
+
+set "PYTHON=%~dp0.venv\Scripts\python.exe"
+
+REM check venv python
+if not exist "%PYTHON%" (
+    echo [ERROR] venv python not found: "%PYTHON%"
+    exit /b 1
+)
+
+REM run each bot in its own window (cmd /k keeps window open on exit/error)
+start "telegram_bot" cmd /k ""%PYTHON%" "%~dp0telegram_bot.py""
+start "scheduler"    cmd /k ""%PYTHON%" "%~dp0scheduler.py""
+
+echo [OK] telegram_bot.py, scheduler.py started
