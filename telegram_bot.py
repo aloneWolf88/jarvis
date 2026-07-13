@@ -188,6 +188,50 @@ async def cmd_research(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _handle(update, text, domain="research")
 
 
+# 추가: /voice <로컬경로> — 큰 m4a/txt를 업로드 없이 로컬 파일로 직접 요약
+#  (텔레그램 봇 다운로드 한도 20MB 우회. 봇과 같은 PC의 파일만 접근 가능)
+async def cmd_voice_local(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_allowed(update):
+        return
+    path = " ".join(context.args).strip().strip('"')  # 따옴표로 감싼 경로도 허용
+    if not path:
+        await update.message.reply_text(
+            "사용법: /voice <파일 전체경로>\n예: /voice D:\\90.temp\\20260703공공데이터 등록.m4a"
+        )
+        return
+    if not os.path.exists(path):
+        await update.message.reply_text(f"❌ 파일을 찾을 수 없습니다:\n{path}")
+        return
+    ext = os.path.splitext(path)[1].lower()
+    if ext not in (".m4a", ".txt"):
+        await update.message.reply_text(f"지원하지 않는 형식입니다: {ext}\n(.m4a 또는 .txt만 가능)")
+        return
+
+    await update.message.reply_text("⏳ 로컬 파일 처리 중... (음성은 수 분 소요될 수 있습니다)")
+    try:
+        if ext == ".m4a":
+            result = await asyncio.to_thread(voice_bot.process_m4a, path)
+        else:
+            result = await asyncio.to_thread(voice_bot.process_txt, path)
+    except Exception as e:
+        logger.exception("[voice] 로컬 파일 처리 오류")
+        await update.message.reply_text(f"❌ 처리 중 오류: {e}")
+        return
+
+    for chunk in _split(result["summary"]):
+        await update.message.reply_text(chunk)
+    if result.get("saved_path"):  # 추가: 로컬 저장 경로 안내
+        note = f"💾 저장됨: {result['saved_path']}"
+        if result.get("saved_original"):  # 추가: 원본 txt 경로도 함께 안내
+            note += f"\n📄 원본: {result['saved_original']}"
+        await update.message.reply_text(note)
+    if result.get("txt_path"):
+        with open(result["txt_path"], "rb") as f:
+            buf = io.BytesIO(f.read())
+        buf.name = os.path.basename(result["txt_path"])
+        await update.message.reply_document(buf, filename=buf.name)
+
+
 # 추가: /youtube (나중에 youtube_bot 구현 후 활성화)
 # async def cmd_youtube(update: Update, context: ContextTypes.DEFAULT_TYPE):
 #     if not is_allowed(update):
@@ -298,6 +342,12 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for chunk in _split(result["summary"]):
         await msg.reply_text(chunk)
 
+    if result.get("saved_path"):  # 추가: 로컬 저장 경로 안내
+        note = f"💾 저장됨: {result['saved_path']}"
+        if result.get("saved_original"):  # 추가: 원본 txt 경로도 함께 안내
+            note += f"\n📄 원본: {result['saved_original']}"
+        await msg.reply_text(note)
+
     # m4a인 경우 변환 txt 파일도 전송 (P1 보완: BytesIO 로 복사본 전달 — async 중 파일 닫힘 위험 회피)
     if result.get("txt_path"):
         with open(result["txt_path"], "rb") as f:
@@ -312,6 +362,7 @@ def main():
 
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("research", cmd_research))
+    app.add_handler(CommandHandler("voice", cmd_voice_local))  # 추가: 로컬 m4a/txt 경로 요약
     app.add_handler(CallbackQueryHandler(cmd_callback))   # 추가: 버튼 클릭 처리
 
     # 추가: 파일 수신 핸들러 (m4a/txt) — 설계문서 §6-3 + P2 보정
