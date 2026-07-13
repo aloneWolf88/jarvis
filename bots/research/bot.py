@@ -8,7 +8,7 @@ class ResearchBot:
         
         cmd = [
             "python",
-            os.path.join(BASE_DIR, "research_bot", "main.py"),
+            os.path.join(BASE_DIR, "bots", "research", "main.py"),  # 수정: research_bot → bots/research
             *args
         ]
 

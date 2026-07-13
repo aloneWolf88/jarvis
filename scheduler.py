@@ -6,7 +6,7 @@ import time                                                     # 추가: 스케
 from datetime import datetime                                   # 추가
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))            # 추가
-RESEARCH_BOT_DIR = os.path.join(BASE_DIR, "research_bot")        # 추가
+RESEARCH_BOT_DIR = os.path.join(BASE_DIR, "bots", "research")    # 수정: research_bot → bots/research
 LOG_DIR = os.path.join(BASE_DIR, "logs")                         # 추가
 os.makedirs(LOG_DIR, exist_ok=True)                              # 추가
 
@@ -28,6 +28,9 @@ def batch_job():
     logger.info("=" * 50)
     logger.info("🚀 스케줄러 배치 시작 (main.py --batch 호출)")
 
+    # 추가: 결과값 추출용 기본값
+    saved = done = sent = None
+
     try:
         result = subprocess.run(
             [sys.executable, "main.py", "--batch"],
@@ -40,20 +43,48 @@ def batch_job():
             check=False,
         )
 
-        if result.stdout:
-            logger.info(result.stdout.rstrip())
-        if result.stderr:
-            logger.warning(result.stderr.rstrip())
+        stdout = result.stdout or ""
+        stderr = result.stderr or ""
 
-        ok = result.returncode == 0
-        logger.info(f"🏁 스케줄러 배치 완료: {'성공' if ok else f'실패(returncode={result.returncode})'}")
-        return {"ok": ok, "returncode": result.returncode}
+        # 수정: stdout 전체를 로그로 남기되, 완료 요약 라인을 별도 INFO로 명시 기록 (수동 실행과 결과 비교)
+        if stdout:
+            logger.info(stdout.rstrip())
+
+        # 추가: "🏁 통합 배치 완료: 신규 N / 요약 M / 전송 K ..." 라인 추출하여 별도 기록
+        for line in stdout.splitlines():
+            if "통합 배치 완료" in line:
+                logger.info(f"[결과 요약] {line.strip()}")
+                # 추가: saved / done / sent 파싱 (정규식 미사용, 단순 분할)
+                try:
+                    saved = int(line.split("신규")[1].split("/")[0].strip())
+                    done = int(line.split("요약")[1].split("/")[0].strip())
+                    sent = int(line.split("전송")[1].split("/")[0].strip())
+                except (IndexError, ValueError):
+                    logger.warning("결과 요약 라인 파싱 실패 (무시)")
+                break
+
+        # 수정: stderr와 stdout 내 ERROR/ok=False 표시를 WARNING으로 승격 기록
+        has_failure_marker = "ok=False" in stdout or "실패" in stdout
+        if stderr:
+            logger.warning(f"[stderr] {stderr.rstrip()}")
+        if has_failure_marker:
+            logger.warning("[실패 표시 감지] orchestrator ok=False 또는 실패 마커 존재 (returncode와 무관)")
+
+        ok = result.returncode == 0 and not has_failure_marker
+        logger.info(
+            f"🏁 스케줄러 배치 완료: {'성공' if ok else f'실패(returncode={result.returncode})'} "
+            f"— 신규 {saved} / 요약 {done} / 전송 {sent}"
+        )
+        return {"ok": ok, "returncode": result.returncode,
+                "saved": saved, "done": done, "sent": sent}
     except subprocess.TimeoutExpired as e:
         logger.error(f"배치 실행 시간 초과: {e}")
-        return {"ok": False, "returncode": None}
+        return {"ok": False, "returncode": None,
+                "saved": saved, "done": done, "sent": sent}
     except Exception as e:
         logger.error(f"배치 실행 중 예외 발생: {e}")
-        return {"ok": False, "returncode": None}
+        return {"ok": False, "returncode": None,
+                "saved": saved, "done": done, "sent": sent}
 
 
 # 추가: 시간대별 실행 간격(분) 반환

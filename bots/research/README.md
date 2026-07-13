@@ -30,7 +30,7 @@ openclaw gateway start
 ## 설치
 
 ```bash
-cd D:\workspace\jarvis\research_bot
+cd D:\workspace\jarvis\bots\research
 pip install -r requirements.txt
 python main.py --init
 ```
@@ -64,7 +64,7 @@ cp openclaw_skill.yaml D:\workspace\jarvis\skills\
 
 ```powershell
 schtasks /create /tn "ResearchBatch" ^
-  /tr "python D:\workspace\research_bot\main.py --batch" ^
+  /tr "python D:\workspace\jarvis\bots\research\main.py --batch" ^
   /sc daily /st 08:00 /f
 ```
 

@@ -17,7 +17,7 @@ def process(text, domain=None):
 
     #print(f"[PROC-DEBUG] domain={routed_domain!r} command={command!r} args={args!r}")
     # 추가: domain이 명시되면 router 분류보다 우선 (오분류 방지)
-    #  - /research_bot 으로 들어온 입력은 domain="research" 강제
+    #  - /research 로 들어온 입력은 domain="research" 강제  — 수정: research_bot → bots/research
     #  - router가 chat 등으로 잘못 분류해도 research로 처리
     if domain:
         routed_domain = domain

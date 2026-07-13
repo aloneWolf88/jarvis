@@ -1,10 +1,11 @@
 import asyncio
+import io                            # 추가: voice bot reply_document BytesIO (P1 보완)
 import logging
 import sys
 import os
 
-# 추가: research_bot 폴더를 path에 추가 (modules 찾기 위해)
-RESEARCH_BOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "research_bot")
+# 추가: bots/research 폴더를 path에 추가 (modules 찾기 위해) — 수정: research_bot → bots/research
+RESEARCH_BOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bots", "research")
 sys.path.insert(0, RESEARCH_BOT_DIR)
 
 import yaml
@@ -21,6 +22,8 @@ from telegram.ext import (
 
 # from research_bot.main import cmd_today   # 삭제: telegram_bot은 직접 안 씀 (program이 호출)
 from program import process
+# 추가: 음성/문서 요약 봇 — design_voice_summary.md §6-1
+from bots.voice import bot as voice_bot
 
 # ── 설정 로드 ──
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -170,6 +173,10 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 향후 봇 안내 (구현 후 활성화)
         # "\n\n[YouTube]\n/youtube <URL> — 영상 요약"
         # "\n\n[DocSort]\n/doc_sort <경로> <방식> — 파일 정리"
+        # 추가: 파일 요약 안내 — design_voice_summary.md §6-4
+        "\n\n[파일 요약]\n"
+        "m4a 파일 전송 — 음성→텍스트 변환 + 요약\n"
+        "txt 파일 전송 — 문서 요약"
     )
 
 
@@ -242,6 +249,63 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("❌ 처리 실패: OpenClaw 응답 없음")
 
 
+# 추가: 파일(m4a/txt) 수신 처리 — design_voice_summary.md §6-2
+VOICE_DATA_DIR = os.path.join(BASE_DIR, config["voice"]["data_dir"])
+os.makedirs(VOICE_DATA_DIR, exist_ok=True)
+MAX_FILE_MB = config["voice"]["max_file_mb"]
+
+
+async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_allowed(update):
+        return
+
+    msg = update.message
+    # Document(파일 첨부) 또는 Audio(음악파일로 인식된 m4a) 모두 지원
+    file_obj = msg.document or msg.audio
+    if not file_obj:
+        return
+
+    file_name = file_obj.file_name or "unknown"
+    ext = os.path.splitext(file_name)[1].lower()
+
+    if ext not in (".m4a", ".txt"):
+        await msg.reply_text(f"지원하지 않는 형식입니다: {ext}\n(.m4a 또는 .txt만 가능)")
+        return
+
+    if file_obj.file_size > MAX_FILE_MB * 1024 * 1024:
+        await msg.reply_text(f"❌ 파일이 너무 큽니다 (한도 {MAX_FILE_MB}MB)")
+        return
+
+    await msg.reply_text("⏳ 파일 처리 중... (음성은 수 분 소요될 수 있습니다)")
+
+    try:
+        # 다운로드
+        tg_file = await file_obj.get_file()
+        save_path = os.path.join(VOICE_DATA_DIR, file_name)
+        await tg_file.download_to_drive(save_path)
+
+        # 처리 (동기·장시간 → 스레드 실행, 기존 _handle 패턴 동일)
+        if ext == ".m4a":
+            result = await asyncio.to_thread(voice_bot.process_m4a, save_path)
+        else:  # .txt
+            result = await asyncio.to_thread(voice_bot.process_txt, save_path)
+    except Exception as e:
+        logger.exception("[voice] 파일 처리 오류")
+        await msg.reply_text(f"❌ 처리 중 오류: {e}")
+        return
+
+    # 요약 응답
+    for chunk in _split(result["summary"]):
+        await msg.reply_text(chunk)
+
+    # m4a인 경우 변환 txt 파일도 전송 (P1 보완: BytesIO 로 복사본 전달 — async 중 파일 닫힘 위험 회피)
+    if result.get("txt_path"):
+        with open(result["txt_path"], "rb") as f:
+            buf = io.BytesIO(f.read())
+        buf.name = os.path.basename(result["txt_path"])
+        await msg.reply_document(buf, filename=buf.name)
+
+
 # ── 메인 ──
 def main():
     app = Application.builder().token(TOKEN).build()
@@ -249,6 +313,11 @@ def main():
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("research", cmd_research))
     app.add_handler(CallbackQueryHandler(cmd_callback))   # 추가: 버튼 클릭 처리
+
+    # 추가: 파일 수신 핸들러 (m4a/txt) — 설계문서 §6-3 + P2 보정
+    #  PTB 는 등록 순서대로 매칭 → Document/Audio 가 TEXT 핸들러보다 먼저 등록되어야
+    #  Document 메시지가 TEXT 핸들러에 먼저 매칭되는 것을 방지
+    app.add_handler(MessageHandler(filters.Document.ALL | filters.AUDIO, handle_file))
 
     if OPENCLAW_TOKEN:
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

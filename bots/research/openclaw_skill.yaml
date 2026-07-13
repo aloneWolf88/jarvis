@@ -24,25 +24,25 @@ triggers:
 commands:
   today:
     description: "오늘 리포트 요약"
-    command: "python C:\\workspace\\research_bot\\main.py --today"
+    command: "python D:\\workspace\\jarvis\\bots\\research\\main.py --today"
     triggers: ["오늘 리서치", "오늘 리포트", "리서치 요약"]
 
   ticker:
     description: "특정 종목 리포트 조회"
-    command: "python C:\\workspace\\research_bot\\main.py --ticker {종목명}"
+    command: "python D:\\workspace\\jarvis\\bots\\research\\main.py --ticker {종목명}"
     triggers: ["종목 조회", "리포트 조회"]
 
   query:
     description: "자연어 질문 응답"
-    command: "python C:\\workspace\\research_bot\\main.py --query \"{질문}\""
+    command: "python D:\\workspace\\jarvis\\bots\\research\\main.py --query \"{질문}\""
     triggers: ["상향 몇건", "하향 몇건", "투자의견"]
 
   new_coverage:
     description: "신규 커버리지 종목 조회"
-    command: "python C:\\workspace\\research_bot\\main.py --new"
+    command: "python D:\\workspace\\jarvis\\bots\\research\\main.py --new"
     triggers: ["신규 커버리지", "새로 나온 종목"]
 
   batch:
     description: "수동 크롤링 실행"
-    command: "python C:\\workspace\\research_bot\\main.py --batch"
+    command: "python D:\\workspace\\jarvis\\bots\\research\\main.py --batch"
     triggers: ["크롤링 실행", "리서치 수집"]

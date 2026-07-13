@@ -28,6 +28,21 @@ PDF_MAX_PAGES = config["crawl"]["pdf_max_pages"]
 PDF_MAX_CHARS = config["crawl"]["pdf_max_chars"]
 
 
+# 추가: LLM 서버 헬스체크 (배치 시작 전 Ollama 가동 여부 확인용)
+def check_llm_health(timeout: int = 5) -> bool:
+    """Ollama 서버에 경량 요청 1회. 응답 시 True, 연결 실패/타임아웃 시 False."""
+    import httpx  # 추가: 지연 임포트
+    api_base = config["ollama"]["api_base"]
+    url = api_base.rstrip("/") + "/models"  # OpenAI 호환 경량 엔드포인트
+    try:
+        resp = httpx.get(url, timeout=timeout)
+        resp.raise_for_status()
+        return True
+    except Exception:
+        logger.error(f"LLM 서버 연결 불가: {api_base}")
+        return False
+
+
 def llm_answer(prompt, temperature=0.7):
     try:
         # 수정: 함수 호출 시점에 클라이언트 생성

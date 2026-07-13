@@ -3,3 +3,13 @@ telegram:
   token: "YOUR_TELEGRAM_BOT_TOKEN"     # BotFather 발급 토큰
   allow_from:
     - "YOUR_TELEGRAM_USER_ID"          # 허용할 텔레그램 사용자 ID
+
+# 추가: 음성/문서 요약 봇(voice) 설정 — design_voice_summary.md §3
+voice:
+  model: "large-v3"          # faster-whisper 모델 (VRAM 부족 시 medium)
+  device: "cuda"             # CUDA 없으면 cpu
+  compute_type: "float16"    # cpu 인 경우 int8 권장
+  language: "ko"
+  data_dir: "data/voice"     # 다운로드/결과 저장 폴더
+  max_file_mb: 20            # 텔레그램 봇 다운로드 한도
+  max_summary_chars: 12000   # 요약 입력 최대 글자수

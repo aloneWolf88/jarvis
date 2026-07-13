@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 KST = timezone(timedelta(hours=9))
 
-_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 수정: research_bot → bots/research 이동으로 폴더 깊이 +1.
+#       telegram token은 루트 config.yaml(jarvis/)에만 있으므로 _ROOT 는 한 단계 더 상승해 jarvis/ 를 가리킨다.
+_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 with open(os.path.join(_ROOT, "config.yaml"), encoding="utf-8") as f:
     _cfg = yaml.safe_load(f)
 
@@ -36,6 +38,13 @@ def _send(text: str) -> bool:
                 logger.warning(f"텔레그램 전송 실패: {e}")
                 ok = False
     return ok
+
+
+# 추가: 배치 실패를 관리자에게 즉시 텔레그램 통지 (무증상 장애 해소)
+def send_admin_alert(reason: str) -> bool:
+    """⚠️ 배치 실패 알림을 CHAT_IDS 로 발송. 기존 _send 재사용."""
+    now_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
+    return _send(f"⚠️ 배치 실패: {reason} ({now_str} KST)")
 
 
 def opinion_emoji(opinion: str) -> str:  # 수정: 함수 위치를 모듈 레벨로 이동
@@ -69,7 +78,8 @@ def notify_new_reports(done_ids: list = None):
 
     if not rows:
         conn.close()
-        return
+        logger.info("📤 텔레그램 알림: 발송 대상(analyzed) 0건 — 생략")  # 추가: 0건 명시 로그
+        return 0  # 수정: 대상 0건 시 0 반환 (기존 None → 호출자가 건수 집계 가능)
 
     now_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -123,6 +133,7 @@ def notify_new_reports(done_ids: list = None):
 
     conn.close()
     logger.info(f"📤 텔레그램 알림: {sent}/{len(rows)}건 전송·전이")
+    return sent  # 추가: 전송 건수 반환 (orchestrator가 결과값 산출용 사용)
 
 
 if __name__ == "__main__":  # 추가: 직접 실행 지원

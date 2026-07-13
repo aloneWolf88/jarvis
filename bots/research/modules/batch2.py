@@ -15,7 +15,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from modules.db import get_conn, _normalize_date  # 수정: _normalize_date 추가
-from modules.summarizer import summarize_report
+from modules.summarizer import summarize_report, check_llm_health  # 수정: check_llm_health 추가
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +137,12 @@ def batch2_job(limit: int = 100):
     done = failed = skipped = 0
     done_ids = []   # N-2 알림용 — 이번에 요약 완료된 report_id
 
+    # 추가: 대상>0이면 루프 진입 전 LLM 헬스체크 1회 (다운 시 건당 재시도 낭비 방지)
+    if total > 0 and not check_llm_health():
+        logger.error("🛑 LLM 서버 다운 — 배치2 조기 종료")
+        return {"done": 0, "skipped": 0, "failed": 0,
+                "done_ids": [], "llm_down": True}  # 추가: llm_down 플래그
+
     for row in rows:
         report_id = row["id"]
         category = row["category"]
@@ -203,7 +209,7 @@ def batch2_job(limit: int = 100):
 
     logger.info(f"🏁 배치2 완료: 성공 {done} / 스킵 {skipped} / 실패 {failed}")
     return {"done": done, "skipped": skipped, "failed": failed,
-            "done_ids": done_ids}
+            "done_ids": done_ids, "llm_down": False}  # 추가: llm_down 기본 False
 
 
 if __name__ == "__main__":
