@@ -6,8 +6,7 @@ import datetime                        # 추가: 날짜 fallback
 import yaml
 
 # telegram_bot.py가 bots/research/ 를 sys.path 에 넣으므로 modules 직접 import 가능
-# 수정: design_voice_summary.md §5 코드 그대로 (research_bot → bots/research 이동에 맞춰 주석만 동기화)
-from modules.summarizer import llm_answer
+from bots.research.modules.summarizer import llm_answer
 from bots.voice.stt import transcribe
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
